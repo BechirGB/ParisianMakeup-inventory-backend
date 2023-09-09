@@ -9,7 +9,6 @@ const {
   cloudinaryRemoveMultipleImage
 } = require("../utils/cloudinary");
 const { Order } = require("../models/order");
-const { Product } = require("../models/Product");
 
 /**-----------------------------------------------
  * @desc    Get All Users Profile
@@ -136,7 +135,6 @@ module.exports.deleteUserProfileCtrl = asyncHandler(async (req, res) => {
   }
 
   // 2. Get all Products from DB
-  const Products = await Product.find({ user: user._id });
 
   // 3. Get the public ids from the Products
   const publicIds = Products?.map((Product) => Product.image.publicId);
@@ -152,7 +150,6 @@ module.exports.deleteUserProfileCtrl = asyncHandler(async (req, res) => {
   }
   
   // 6. Delete user Products & Orders
-  await Product.deleteMany({ user: user._id });
   await Order.deleteMany({ user: user._id });
 
   // 7. Delete the user himself
