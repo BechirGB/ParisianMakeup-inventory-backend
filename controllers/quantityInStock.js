@@ -1,7 +1,7 @@
 const { OrderItem } = require('../models/order-item');
 const { SellingOrderItem } = require('../models/sellingorder-item');
 const _ = require('lodash');
-const { Product } = require('../middlewares/Product');
+const { Product } = require('../models/Product');
 
 async function calculateQuantityInStock() {
   try {

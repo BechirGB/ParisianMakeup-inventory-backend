@@ -3,7 +3,7 @@ const path = require("path");
 const asyncHandler = require("express-async-handler");
 const {
   Product
-} = require("../middlewares/Product");
+} = require("../models/Product");
 const OrderItem = require("../models/order-item"); // Import your OrderItem model
 const SellingOrderItem = require("../models/sellingorder-item"); 
 
