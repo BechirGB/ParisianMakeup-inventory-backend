@@ -8,7 +8,6 @@ const quantityInStockSchema = new mongoose.Schema({
   },
   stock: {
     type: Number,
-    required: true,
   },
 });
 
