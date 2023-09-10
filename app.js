@@ -34,7 +34,7 @@ app.use(rateLimiting({
 
 // Cors Policy
 app.use(cors({
-  origin: ["http://localhost:3000", "https://parisian-makeup-inventory-app-api.onrender.com"]
+  origin: ["https://parisian-makeup-inventory-app-api.onrender.com"]
 }));
 
 // Routes
