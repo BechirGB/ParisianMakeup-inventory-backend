@@ -63,7 +63,11 @@ module.exports.loginUserCtrl = asyncHandler(async (req, res) => {
     return res.status(400).json({ message: "Invalid email or password" });
   }
 
-  const passwordMatch = await bcrypt.compare(req.body.password, user.password);
+  if (!user.isAdmin) {
+   if (!user.isEnabled ) {
+    return res.status(401).json({ message: "Account is disabled. Contact an admin for assistance." });
+   }
+  }
   if (req.body.password != user.password) {
     return res.status(400).json({ message: "Invalid email or password" });
   }
@@ -82,7 +86,6 @@ module.exports.loginUserCtrl = asyncHandler(async (req, res) => {
   res.status(200).json({
     _id: user._id,
     isAdmin: user.isAdmin,
-    profilePhoto: user.profilePhoto,
     token,
     username: user.username,
   });

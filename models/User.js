@@ -26,17 +26,14 @@ const UserSchema = new mongoose.Schema({
         trim: true,
         minlength: 8,
     },
-    profilePhoto: {
-        type: Object,
-        default: {
-            url: "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460__480.png",
-            publicId: null,
-        }
-    },
   
     isAdmin: {
         type:Boolean,
         default: false,
+    },
+    isEnabled: {
+        type: Boolean,
+        default: true, 
     },
 
 }, {
@@ -45,7 +42,6 @@ const UserSchema = new mongoose.Schema({
     toObject: { virtuals: true }
 });
 
-// Populate Posts That Belongs To This User When he/she Get his/her Profile
 UserSchema.virtual("products", {
     ref: "Product",
     foreignField: "user",

@@ -4,8 +4,8 @@ const {
   getUserProfileCtrl,
   updateUserProfileCtrl,
   getUsersCountCtrl,
-  profilePhotoUploadCtrl,
   deleteUserProfileCtrl,
+  enableDisableUserCtrl
 } = require("../controllers/usersController");
 const {
   verifyTokenAndAdmin,
@@ -14,21 +14,21 @@ const {
   verifyTokenAndAuthorization,
 } = require("../middlewares/verifyToken");
 const validateObjectId = require("../middlewares/validateObjectId");
-const photoUpload = require("../middlewares/photoUpload");
 
 // /api/users/profile
 router.route("/profile").get(getAllUsersCtrl);
 
 // /api/users/profile/profile-photo-upload
-router
-  .route("/profile/profile-photo-upload")
-  .post(verifyToken, photoUpload.single("image"), profilePhotoUploadCtrl);
+
+   
+router.put('/enable-disable/:id', enableDisableUserCtrl);
+
 
 // /api/users/profile/:id
 router 
   .route("/profile/:id")
   .get(validateObjectId, getUserProfileCtrl)
-  .put(validateObjectId, verifyTokenAndOnlyUser, updateUserProfileCtrl)
+  .put(validateObjectId, verifyTokenAndAdmin, updateUserProfileCtrl)
   .delete(validateObjectId, verifyTokenAndAuthorization,deleteUserProfileCtrl);
 
 // /api/users/count

@@ -109,10 +109,8 @@ module.exports.updateProductCtrl = asyncHandler(async (req, res) => {
       return res.status(404).json({ message: "Product not found" });
     }
 
-    // Send response to the client
     res.status(200).json(updatedProduct);
   } catch (error) {
-    // Handle error and send an appropriate response
     console.error(error);
     res.status(500).json({ error: "Failed to update product." });
   }
