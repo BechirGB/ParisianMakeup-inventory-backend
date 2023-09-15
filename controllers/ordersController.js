@@ -40,6 +40,7 @@ const totalPrices = await Promise.all(orderItemsIdsResolved.map(async (orderItem
 const totalPrice = totalPrices.reduce((a,b) => a +b , 0);
 
 let order = new Order({
+    order_Id:req.body.order_Id,
     store:req.body.store,
     orderItems: orderItemsIdsResolved,
     totalPrice: totalPrice,
@@ -122,6 +123,7 @@ module.exports.updateOrderCtrl = asyncHandler(async (req, res) => {
       req.params.id,
       {
         $set: {
+          order_Id:req.body.order_Id,
           store: req.body.store,
           dateOrdered: req.body.dateOrdered,
         },
@@ -190,7 +192,8 @@ module.exports.UpdateorderItemCtrl = asyncHandler(async (req, res) => {
           quantity: req.body.quantity,
           price: req.body.price,
           product: req.body.product,
-          discount:req.body.discount,
+          quantity_in_tunisia: req.body.quantity_in_tunisia,
+          discount: req.body.discount,
         },
       },
       { new: true }
@@ -201,16 +204,11 @@ module.exports.UpdateorderItemCtrl = asyncHandler(async (req, res) => {
     }
 
     const updatedTotalPrice = calculateUpdatedTotalPrice(orderItem);
-
+    console.log(updatedTotalPrice)
     const order = await Order.findOneAndUpdate(
-      { orderItems: orderItem._id },
-      { $set: { totalPrice: updatedTotalPrice } },
-      { new: true }
+      { orderItems: orderItem._id }, 
+      { $set: {   totalPrice: updatedTotalPrice} }, 
     );
-
-    if (!order) {
-      return res.status(404).send('Associated order not found.');
-    }
 
     res.send(orderItem);
   } catch (err) {
@@ -224,9 +222,10 @@ module.exports.UpdateorderItemCtrl = asyncHandler(async (req, res) => {
   }
 });
 
+
 function calculateUpdatedTotalPrice(orderItem) {
-  const totalPrice =
-    orderItem.quantity * orderItem.price * (1 - orderItem.discount / 100);
+  const totalPrice = 
+    orderItem.quantity * orderItem.price * (1 - orderItem.discount / 100)* 1;
   return totalPrice;
 }
 /**-----------------------------------------------

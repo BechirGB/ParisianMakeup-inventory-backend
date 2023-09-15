@@ -19,7 +19,6 @@ function verifyToken(req, res, next) {
   }
 }
 
-// Verify Token & Admin
 function verifyTokenAndAdmin(req, res, next) {
   verifyToken(req, res, () => {
     if (req.user.isAdmin) {
@@ -30,7 +29,6 @@ function verifyTokenAndAdmin(req, res, next) {
   });
 }
 
-// Verify Token & Only User Himself
 function verifyTokenAndOnlyUser(req, res, next) {
   verifyToken(req, res, () => {
     if (req.user.id === req.params.id) {

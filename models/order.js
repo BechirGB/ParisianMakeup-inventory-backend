@@ -2,6 +2,12 @@ const mongoose = require ('mongoose');
 const { OrderItem } = require('./order-item');
 
 const orderSchema = mongoose.Schema({
+    order_Id:{
+        type:String,
+        unique: true,
+        required: true,
+
+    },
 
     store:{
         type: String,
@@ -20,6 +26,8 @@ const orderSchema = mongoose.Schema({
     user: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
+        required: true
+
     },
     dateOrdered: {
         type: Date,

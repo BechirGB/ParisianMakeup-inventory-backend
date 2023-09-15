@@ -1,9 +1,7 @@
 const mongoose = require('mongoose');
 
 const orderItemSchema = mongoose.Schema({
- 
-   
-   
+    
     quantity: {
         type: Number,
         required: true
@@ -22,7 +20,14 @@ const orderItemSchema = mongoose.Schema({
         type: Number,
         default: 0,
       },
+
+    quantity_in_tunisia: {
+      type: Number,
+      default: 0,
+
+    }
     });
+  
       orderItemSchema.set('toJSON', {
         virtuals: true,
       })

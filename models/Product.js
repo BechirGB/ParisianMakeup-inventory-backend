@@ -23,6 +23,11 @@ const productSchema = new mongoose.Schema({
       
 
     },
+    quantity_in_tunisia:{
+      type: Number,
+      
+
+    },
     sale_Price:{
       type: Number,
 

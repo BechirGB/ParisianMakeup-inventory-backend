@@ -7,6 +7,8 @@ const {
 } = require("../models/User");
 const VerificationToken = require("../models/VerificationToken");
 const crypto = require("crypto");
+const tokenDuration = 7200; // 2 hours in seconds
+
 
 /**-----------------------------------------------
  * @desc    Register New User
@@ -15,10 +17,7 @@ const crypto = require("crypto");
  * @access  public
  ------------------------------------------------*/
 module.exports.registerUserCtrl = asyncHandler(async (req, res) => {
-  const { error } = validateRegisterUser(req.body);
-  if (error) {
-    return res.status(400).json({ message: error.details[0].message });
-  }
+
 
   let user = await User.findOne({ email: req.body.email });
   if (user) {
@@ -31,12 +30,11 @@ module.exports.registerUserCtrl = asyncHandler(async (req, res) => {
   user = new User({
     username: req.body.username,
     email: req.body.email,
-    password: req.body.password, // Store the hashed password, not the plain text
+    password: req.body.password, 
     isAdmin: req.body.isAdmin,
   });
   await user.save();
 
-  // Creating new VerificationToken & save it to DB
   const verificationToken = new VerificationToken({
     userId: user._id,
     token: crypto.randomBytes(32).toString("hex"),

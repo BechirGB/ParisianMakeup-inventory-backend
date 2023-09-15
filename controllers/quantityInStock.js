@@ -22,6 +22,25 @@ async function calculateQuantityInStock() {
         },
       },
     ]);
+    const orderItemsAg = await OrderItem.aggregate([
+      {
+        $group: {
+          _id: { product: "$product" },
+          totalQuantity: { $sum: "$quantity_in_tunisia" },
+        },
+      },
+    ]);
+
+    
+    const combinedItems2 = _.groupBy(orderItemsAg.concat(sellingOrderItemsAggregate), '_id.product');
+
+    const productQuantity = _.mapValues(combinedItems2, function (items) {
+      if (items.length > 1) {
+        return items.reduce((total, item) => Number(total.totalQuantity) + Number(item.totalQuantity));
+      } else {
+        return items[0].totalQuantity;
+      }
+    });
 
     const combinedItems = _.groupBy(orderItemsAggregate.concat(sellingOrderItemsAggregate), '_id.product');
 
@@ -39,6 +58,8 @@ async function calculateQuantityInStock() {
       const productId = product._id.toString();
       if (productQuantities.hasOwnProperty(productId)) {
         product.quantity = productQuantities[productId];
+        product.quantity_in_tunisia= productQuantity[productId];
+
       }
     }
 
@@ -49,9 +70,22 @@ async function calculateQuantityInStock() {
   }
 }
 
+
+
+
+
+
+
 module.exports = {
   calculateQuantityInStock,
+
+
 };
+
+
+
+
+
 
 
 

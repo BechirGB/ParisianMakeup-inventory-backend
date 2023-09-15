@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 const Joi = require("joi");
 const jwt = require("jsonwebtoken");
 const passwordComplexity = require("joi-password-complexity");
+const tokenDuration = 7200; // 2 hours in seconds
 
 // User Schema
 const UserSchema = new mongoose.Schema({
@@ -60,10 +61,12 @@ UserSchema.virtual("sellingorders", {
 
 
 // Generate Auth Token
-UserSchema.methods.generateAuthToken = function() {
-    return jwt.sign({id: this._id, isAdmin: this.isAdmin}, process.env.JWT_SECRET);
-}
 
+
+    UserSchema.methods.generateAuthToken = function() {
+        return jwt.sign({ id: this._id, isAdmin: this.isAdmin }, process.env.JWT_SECRET, {
+            expiresIn: tokenDuration,
+          });}
 // User Model
 const User = mongoose.model("User", UserSchema);
 
