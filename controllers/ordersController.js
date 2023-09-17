@@ -203,12 +203,29 @@ module.exports.UpdateorderItemCtrl = asyncHandler(async (req, res) => {
       return res.status(404).send('Order item not found.');
     }
 
+    // Calculate the updated total price for the order item
     const updatedTotalPrice = calculateUpdatedTotalPrice(orderItem);
-    console.log(updatedTotalPrice)
-    const order = await Order.findOneAndUpdate(
-      { orderItems: orderItem._id }, 
-      { $set: {   totalPrice: updatedTotalPrice} }, 
+
+    // Find the order that contains the updated order item
+    const order = await Order.findOne({ orderItems: orderItem._id });
+
+    if (!order) {
+      return res.status(404).send('Order not found.');
+    }
+
+    // Calculate the new total price for the order by summing up the total prices of its order items
+    const totalPrices = await Promise.all(
+      order.orderItems.map(async (orderItemId) => {
+        const orderItem = await OrderItem.findById(orderItemId);
+        return calculateUpdatedTotalPrice(orderItem);
+      })
     );
+
+    const totalPrice = totalPrices.reduce((a, b) => a + b, 0);
+
+    // Update the total price of the order
+    order.totalPrice = totalPrice;
+    await order.save();
 
     res.send(orderItem);
   } catch (err) {
@@ -221,6 +238,7 @@ module.exports.UpdateorderItemCtrl = asyncHandler(async (req, res) => {
     res.status(500).send('Internal Server Error');
   }
 });
+
 
 
 function calculateUpdatedTotalPrice(orderItem) {
