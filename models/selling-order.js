@@ -1,11 +1,12 @@
 const mongoose = require ('mongoose');
 const { SellingOrderItem } = require('./sellingorder-item');
+const { number } = require('joi');
 
 
 const sellingorderSchema = mongoose.Schema({
 
     deliveryId:{
-        type: Number,
+        type: String,
 
     },
     sellingorderItems: [{
