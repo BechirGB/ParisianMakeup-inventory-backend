@@ -4,6 +4,7 @@ const {
   getAllSellingordersCtrl,
   getSingleSellingOrderCtrl,
   addNewSellingOrderItemCtrl,
+  updateSellingOrderCtrl,
   deleteSellingorderCtrl,
   totalSellingOrders,
 } = require("../controllers/sellingOrdersController");
@@ -27,6 +28,7 @@ router.route("/sellingorderitems/:id")
 // Routes for /api/SellingOrders/:id
 router.route("/:id")
   .get(getSingleSellingOrderCtrl)
+  .put(verifyToken,updateSellingOrderCtrl)
   .delete(verifyToken, deleteSellingorderCtrl);
 
 module.exports = router;
