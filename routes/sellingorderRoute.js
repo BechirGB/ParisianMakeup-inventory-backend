@@ -7,6 +7,7 @@ const {
   updateSellingOrderCtrl,
   deleteSellingorderCtrl,
   totalSellingOrders,
+  getSellingOrdersBetweenDatesCtrl
 } = require("../controllers/sellingOrdersController");
 const {
   verifyTokenAndAdmin,
@@ -21,6 +22,8 @@ router.route("/")
 
 router.route("/count")
   .get(totalSellingOrders);
+router.route("/total")
+ .get(getSellingOrdersBetweenDatesCtrl);
 
 router.route("/sellingorderitems/:id")
   .put(verifyToken,addNewSellingOrderItemCtrl);

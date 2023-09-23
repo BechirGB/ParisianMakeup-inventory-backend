@@ -3,12 +3,15 @@ const {
   createOrderCtrl,
   getAllordersCtrl,
   getSingleOrderCtrl,
+  getOrdersBetweenDatesCtrl,
   deleteOrderCtrl,
   updateOrderCtrl,
-  totalPurchasesCtrl,
+  calculateTotalPurchaseCtrl,
   userOrdersCtrl,
   addNewOrderItemCtrl,
   totalOrders,
+  
+
 
 
 } = require("../controllers/ordersController");
@@ -25,7 +28,9 @@ router
 
   
   router.route("/count").get(totalOrders);
-  router.route("/orderitems/:id").put( validateObjectId,verifyTokenAndAdmin,addNewOrderItemCtrl)
+  router.route("/orderitems/:id").put( validateObjectId,verifyTokenAndAdmin,addNewOrderItemCtrl);
+  router.route("/total-purchase").post(calculateTotalPurchaseCtrl);
+  router.route('/total').get(getOrdersBetweenDatesCtrl);
 
 // /api/orders/:id
 router

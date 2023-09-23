@@ -4,7 +4,7 @@ const { SellingOrderItem } = require('../models/sellingorder-item');
 const asyncHandler = require("express-async-handler");
 
 /**-----------------------------------------------
- * @desc    Get All orders
+ * @desc    Get All selling orders
  * @route   /api/sellingorders
  * @method  GET
  * @access  public
@@ -13,8 +13,22 @@ const asyncHandler = require("express-async-handler");
     const orders = await SellingOrder.find().populate({ path: 'sellingorderItems', populate: {
       path : 'product'} 
   }).populate("user","username").sort({'date': -1})
+  const totalSales = await SellingOrder.aggregate([
+    {
+      $group: {
+        _id: null,
+        total: { $sum: "$totalPrice" },
+      },
+    },
+  ]);
 
-    res.status(200).json(orders);
+  let totalSalesValue = 0;
+
+  if (totalSales.length > 0) {
+    totalSalesValue = totalSales[0].total;
+  }
+
+    res.status(200).json({orders, totalSales : totalSalesValue});
   });
   /**-----------------------------------------------
    * @desc    Get Single SellingOrder
@@ -48,9 +62,8 @@ const asyncHandler = require("express-async-handler");
  ------------------------------------------------*/
  module.exports.createSellingOrderCtrl = asyncHandler(async (req, res) => {
     try {
-      const sellingorderItems = req.body.sellingorderItems; // Assuming you have sellingorderItems array in the request
+      const sellingorderItems = req.body.sellingorderItems; 
   
-      // Create selling order items and store their IDs
       const sellingorderItemsIds = [];
       for (const sellingorderItemData of sellingorderItems) {
         const newSellingOrderItem = new SellingOrderItem({
@@ -285,12 +298,7 @@ module.exports.updateSellingOrderItemCtrl = asyncHandler(async (req, res) => {
     res.status(500).send('Internal Server Error');
   }
 })
-/**-----------------------------------------------
- * @desc    Delete order
- * @route   /api/orders/:id
- * @method  DELETE
- * @access  private (only admin)
- ------------------------------------------------*/
+
  /**-----------------------------------------------
  * @desc    Delete SellingOrderItem
  * @route   /api/sellingorderitems/:id
@@ -328,5 +336,81 @@ module.exports.deleteSellingorderitemCtrl = asyncHandler(async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Internal Server Error" });
+  }
+});
+/**-----------------------------------------------
+ * @desc    Get SellinOrders between Two Dates and Calculate Total Purchase
+ * @route   /api/selligorders/total
+ * @method  GET
+ * @access  public
+ ------------------------------------------------*/
+ module.exports.getSellingOrdersBetweenDatesCtrl = asyncHandler(async (req, res) => {
+  try {
+    const { startDate, endDate } = req.query;
+    let query = {};
+
+    if (startDate && endDate) {
+      query.date = {
+        $gte: new Date(startDate),
+        $lte: new Date(endDate),
+      };
+    }
+
+    const sellingorders = await SellingOrder.find(query)
+      .populate({
+        path: 'sellingorderItems',
+        populate: {
+          path: 'product'
+        }
+      })
+      .populate('user', 'username')
+      .sort({ 'date': -1 });
+
+    let totalSales = 0;
+
+    if (startDate && endDate) {
+      totalSales = await SellingOrder.aggregate([
+        {
+          $match: {
+            date: {
+              $gte: new Date(startDate),
+              $lte: new Date(endDate),
+            },
+          },
+        },
+        {
+          $group: {
+            _id: null,
+            total: { $sum: "$totalPrice" },
+          },
+        },
+      ]);
+
+      if (totalSales.length > 0) {
+        totalSales = totalSales[0].total;
+      } else {
+        totalSales = 0;
+      }
+    } else {
+      totalSales = await SellingOrder.aggregate([
+        {
+          $group: {
+            _id: null,
+            total: { $sum: "$totalPrice" },
+          },
+        },
+      ]);
+
+      if (totalSales.length > 0) {
+        totalSales = totalSales[0].total;
+      } else {
+        totalSales = 0;
+      }
+    }
+
+    res.status(200).json({ sellingorders, totalSales });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "An error occurred while fetching orders and calculating total purchase" });
   }
 });

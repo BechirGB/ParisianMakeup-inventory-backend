@@ -62,13 +62,35 @@ res.send(order);
  * @method  GET
  * @access  public
  ------------------------------------------------*/
-module.exports.getAllordersCtrl = asyncHandler(async (req, res) => {
-  const orders = await Order.find().populate({ 
-    path: 'orderItems', populate: {
-        path : 'product'} 
-    }).populate("user","username").sort({'dateOrdered': -1})
-  res.status(200).json(orders);
+ module.exports.getAllordersCtrl = asyncHandler(async (req, res) => {
+  const orders = await Order.find()
+    .populate({ 
+      path: 'orderItems', 
+      populate: {
+        path: 'product'
+      }
+    })
+    .populate("user", "username")
+    .sort({ 'dateOrdered': -1 });
+
+  const totalPurchase = await Order.aggregate([
+    {
+      $group: {
+        _id: null,
+        total: { $sum: "$totalPrice" },
+      },
+    },
+  ]);
+
+  let totalPurchaseValue = 0;
+
+  if (totalPurchase.length > 0) {
+    totalPurchaseValue = totalPurchase[0].total;
+  }
+
+  res.status(200).json({ orders, totalPurchase: totalPurchaseValue });
 });
+
 /**-----------------------------------------------
  * @desc    Get Single Order
  * @route   /api/orders/:id
@@ -203,17 +225,14 @@ module.exports.UpdateorderItemCtrl = asyncHandler(async (req, res) => {
       return res.status(404).send('Order item not found.');
     }
 
-    // Calculate the updated total price for the order item
     const updatedTotalPrice = calculateUpdatedTotalPrice(orderItem);
 
-    // Find the order that contains the updated order item
     const order = await Order.findOne({ orderItems: orderItem._id });
 
     if (!order) {
       return res.status(404).send('Order not found.');
     }
 
-    // Calculate the new total price for the order by summing up the total prices of its order items
     const totalPrices = await Promise.all(
       order.orderItems.map(async (orderItemId) => {
         const orderItem = await OrderItem.findById(orderItemId);
@@ -223,7 +242,6 @@ module.exports.UpdateorderItemCtrl = asyncHandler(async (req, res) => {
 
     const totalPrice = totalPrices.reduce((a, b) => a + b, 0);
 
-    // Update the total price of the order
     order.totalPrice = totalPrice;
     await order.save();
 
@@ -327,5 +345,122 @@ module.exports.addNewOrderItemCtrl = asyncHandler(async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).send('An error occurred while adding new order items.');
+  }
+});
+/**-----------------------------------------------
+ * @desc    Calculate Total Purchase between Two Dates
+ * @route   /api/orders/total-purchase
+ * @method  POST
+ * @access  private (only admin)
+ ------------------------------------------------*/
+ module.exports.calculateTotalPurchaseCtrl = asyncHandler(async (req, res) => {
+  try {
+    const { startDate, endDate } = req.body;
+    
+    if (!startDate || !endDate) {
+      return res.status(400).json({ message: "Please provide start and end dates" });
+    }
+
+    const totalPurchase = await Order.aggregate([
+      {
+        $match: {
+          dateOrdered: {
+            $gte: new Date(startDate),
+            $lte: new Date(endDate),
+          },
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          total: { $sum: "$totalPrice" },
+        },
+      },
+    ]);
+
+    if (totalPurchase.length === 0) {
+      return res.status(404).json({ message: "No orders found within the specified date range" });
+    }
+
+    res.status(200).json({ totalPurchase: totalPurchase[0].total });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "An error occurred while calculating total purchase" });
+  }
+});
+/**-----------------------------------------------
+ * @desc    Get Orders between Two Dates and Calculate Total Purchase
+ * @route   /api/orders/total
+ * @method  GET
+ * @access  public
+ ------------------------------------------------*/
+ module.exports.getOrdersBetweenDatesCtrl = asyncHandler(async (req, res) => {
+  try {
+    const { startDate, endDate } = req.query;
+    let query = {};
+
+    if (startDate && endDate) {
+      query.dateOrdered = {
+        $gte: new Date(startDate),
+        $lte: new Date(endDate),
+      };
+    }
+
+    const orders = await Order.find(query)
+      .populate({
+        path: 'orderItems',
+        populate: {
+          path: 'product'
+        }
+      })
+      .populate('user', 'username')
+      .sort({ 'dateOrdered': -1 });
+
+    let totalPurchase = 0;
+
+    if (startDate && endDate) {
+      totalPurchase = await Order.aggregate([
+        {
+          $match: {
+            dateOrdered: {
+              $gte: new Date(startDate),
+              $lte: new Date(endDate),
+            },
+          },
+        },
+        {
+          $group: {
+            _id: null,
+            total: { $sum: "$totalPrice" },
+          },
+        },
+      ]);
+
+      if (totalPurchase.length > 0) {
+        totalPurchase = totalPurchase[0].total;
+      } else {
+        totalPurchase = 0;
+      }
+    } else {
+      totalPurchase = await Order.aggregate([
+        {
+          $group: {
+            _id: null,
+            total: { $sum: "$totalPrice" },
+          },
+        },
+      ]);
+
+      if (totalPurchase.length > 0) {
+        totalPurchase = totalPurchase[0].total;
+      } else {
+        totalPurchase = 0;
+      }
+    }
+
+    res.status(200).json({ orders, totalPurchase });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "An error occurred while fetching orders and calculating total purchase" });
   }
 });
