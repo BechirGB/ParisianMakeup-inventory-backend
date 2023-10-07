@@ -60,17 +60,14 @@ UserSchema.virtual("sellingorders", {
 });
 
 
-// Generate Auth Token
 
 
     UserSchema.methods.generateAuthToken = function() {
         return jwt.sign({ id: this._id, isAdmin: this.isAdmin }, process.env.JWT_SECRET, {
             expiresIn: tokenDuration,
           });}
-// User Model
 const User = mongoose.model("User", UserSchema);
 
-// Validate Register User
 function validateRegisterUser(obj) {
     const schema = Joi.object({
         username: Joi.string().trim().min(2).max(100).required(),

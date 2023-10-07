@@ -1,7 +1,7 @@
-// Import the required modules and models
 const { SellingOrder } = require('../models/selling-order');
 const { SellingOrderItem } = require('../models/sellingorder-item');
 const asyncHandler = require("express-async-handler");
+const { calculateQuantityInStock } = require('./quantityInStock');
 
 /**-----------------------------------------------
  * @desc    Get All selling orders
@@ -61,48 +61,71 @@ const asyncHandler = require("express-async-handler");
  * @access  private (only admin)
  ------------------------------------------------*/
  module.exports.createSellingOrderCtrl = asyncHandler(async (req, res) => {
-    try {
-      const sellingorderItems = req.body.sellingorderItems; 
-  
-      const sellingorderItemsIds = [];
-      for (const sellingorderItemData of sellingorderItems) {
-        const newSellingOrderItem = new SellingOrderItem({
-          quantity: sellingorderItemData.quantity,
-          product: sellingorderItemData.product,
-          price: sellingorderItemData.price,
+  try {
+    const sellingorderItems = req.body.sellingorderItems;
+
+    const productsInStock = await calculateQuantityInStock();
+
+    for (const sellingorderItemData of sellingorderItems) {
+      // Find the corresponding product in stock
+      const productInStock = productsInStock.find((product) =>
+        product._id.equals(sellingorderItemData.product)
+      );
+
+      if (!productInStock) {
+        return res.status(400).json({ message: 'Product not found in stock.' });
+      }
+
+      const availableQuantity = productInStock.quantity;
+
+      if (sellingorderItemData.quantity > availableQuantity) {
+        return res.status(400).json({
+          message:'Not enough quantity available in stock for this product.',
         });
-  
-        const savedSellingOrderItem = await newSellingOrderItem.save();
-        sellingorderItemsIds.push(savedSellingOrderItem._id);
       }
-  
-      let totalPrice = 0;
-      for (const sellingorderItemId of sellingorderItemsIds) {
-        const sellingorderItem = await SellingOrderItem.findById(sellingorderItemId);
-        totalPrice += sellingorderItem.price * sellingorderItem.quantity;
-      }
-  
-      const sellingOrder = new SellingOrder({
-        deliveryId: req.body.deliveryId,
-        sellingorderItems: sellingorderItemsIds,
-        user: req.user.id,
-
-        totalPrice: totalPrice,
-        date: req.body.date,
-      });
-  
-      const savedSellingOrder = await sellingOrder.save();
-  
-      if (!savedSellingOrder) {
-        return res.status(400).send('The SellingOrder cannot be created!');
-      }
-
-  
-      res.send(savedSellingOrder);
-    } catch (error) {
-      res.status(500).json({ success: false, error: error.message });
     }
-  });
+
+
+    const sellingorderItemsIds = [];
+
+    for (const sellingorderItemData of sellingorderItems) {
+      const newSellingOrderItem = new SellingOrderItem({
+        quantity: sellingorderItemData.quantity,
+        product: sellingorderItemData.product,
+        price: sellingorderItemData.price,
+      });
+
+      const savedSellingOrderItem = await newSellingOrderItem.save();
+      sellingorderItemsIds.push(savedSellingOrderItem._id);
+    }
+
+    let totalPrice = 0;
+
+    for (const sellingorderItemId of sellingorderItemsIds) {
+      const sellingorderItem = await SellingOrderItem.findById(sellingorderItemId);
+      totalPrice += sellingorderItem.price * sellingorderItem.quantity;
+    }
+
+    const sellingOrder = new SellingOrder({
+      deliveryId: req.body.deliveryId,
+      sellingorderItems: sellingorderItemsIds,
+      user: req.user.id,
+      totalPrice: totalPrice,
+      date: req.body.date,
+    });
+
+    const savedSellingOrder = await sellingOrder.save();
+
+    if (!savedSellingOrder) {
+      return res.status(400).send('The SellingOrder cannot be created!');
+    }
+
+    res.send(savedSellingOrder);
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 /**-----------------------------------------------
  * @desc    Delete Sellingorder
  * @route   /api/sellingorders/:id
@@ -155,7 +178,6 @@ const asyncHandler = require("express-async-handler");
     )
       res.status(200).json(updatedSellingOrder);
     } catch (error) {
-      // Handle error and send an appropriate response
       res.status(500).json({ error: "Failed to update SellingOrder." });
     }
   })
@@ -169,10 +191,30 @@ const asyncHandler = require("express-async-handler");
   
   try {
     const sellingOrder = await SellingOrder.findById(req.params.id);
+    const productsInStock = await calculateQuantityInStock();
 
     if (!sellingOrder) {
       return res.status(404).send('Selling Order not found');
     }
+    for (const sellingorderItemData of  req.body.sellingorderItems) {
+      // Find the corresponding product in stock
+      const productInStock = productsInStock.find((product) =>
+        product._id.equals(sellingorderItemData.product)
+      );
+
+      if (!productInStock) {
+        return res.status(400).json({ message: 'Product not found in stock.' });
+      }
+
+      const availableQuantity = productInStock.quantity;
+
+      if (sellingorderItemData.quantity > availableQuantity) {
+        return res.status(400).json({
+          message:'Not enough quantity available in stock for this product.',
+        });
+      }
+    }
+
 
     if (req.body.sellingorderItems && Array.isArray(req.body.sellingorderItems)) {
       const newSellingOrderItems = [];

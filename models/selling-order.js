@@ -7,6 +7,7 @@ const sellingorderSchema = mongoose.Schema({
 
     deliveryId:{
         type: String,
+        unique:true
 
     },
     sellingorderItems: [{

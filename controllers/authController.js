@@ -7,7 +7,7 @@ const {
 } = require("../models/User");
 const VerificationToken = require("../models/VerificationToken");
 const crypto = require("crypto");
-const tokenDuration = 7200; // 2 hours in seconds
+const tokenDuration = 7200; 
 
 
 /**-----------------------------------------------
@@ -88,6 +88,5 @@ module.exports.loginUserCtrl = asyncHandler(async (req, res) => {
     username: user.username,
   });
 });
-
 
 
