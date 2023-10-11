@@ -4,7 +4,8 @@ const {
   getOrderItemCtrl,
   UpdateorderItemCtrl,
   getSingleOrderItemCtrl,
-  deleteOrderItemCtrl
+  deleteOrderItemCtrl,
+  getOrderItemByProductNameCtrl,
 
 } = require("../controllers/ordersController");
 const { verifyTokenAndAdmin } = require("../middlewares/verifyToken");
@@ -15,8 +16,8 @@ router
   .route("/")
   .get(getOrderItemCtrl);
 
-
-  
+router.route('/product/:productName')
+  .get(getOrderItemByProductNameCtrl)
 
 
 // /api/orders/:id

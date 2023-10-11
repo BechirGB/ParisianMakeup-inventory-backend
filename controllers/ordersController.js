@@ -1,4 +1,6 @@
 const asyncHandler = require("express-async-handler");
+const mongoose = require('mongoose');
+
 const { Order } = require("../models/order");
 const { OrderItem } = require('../models/order-item');
 const { User }= require('../models/User');
@@ -10,51 +12,66 @@ const quantityInStockController = require('../controllers/quantityInStock');
  * @method  POST
  * @access  private (only admin)
  ------------------------------------------------*/
-module.exports.createOrderCtrl = asyncHandler(async (req, res) => {
 
-  const orderItemsIds = Promise.all(req.body.orderItems.map(async (orderItem) =>{
-    let newOrderItem = new OrderItem({
-        quantity: orderItem.quantity,
-        product: orderItem.product,
-        discount:orderItem.discount,
-        price:orderItem.price,
-    })
 
-    const productId = orderItem.product._id;
-    quantityInStockController.calculateQuantityInStock(productId);
+ module.exports.createOrderCtrl = asyncHandler(async (req, res) => {
+   const session = await mongoose.startSession();
+   session.startTransaction();
+ 
+   try {
+     const orderItems = req.body.orderItems;
+     const orderItemsIds = [];
+     let totalPrice = 0;
+ 
+     for (const orderItem of orderItems) {
+       const productId = orderItem.product._id;
+       quantityInStockController.calculateQuantityInStock(productId);
+ 
+       const newOrderItem = new OrderItem({
+         quantity: orderItem.quantity,
+         product: orderItem.product,
+         discount: orderItem.discount,
+         price: orderItem.price,
+       });
+ 
+       const savedOrderItem = await newOrderItem.save({ session });
+       orderItemsIds.push(savedOrderItem._id);
+ 
+       const itemTotalPrice =
+         (savedOrderItem.price * savedOrderItem.quantity) -
+         ((savedOrderItem.price * savedOrderItem.quantity * savedOrderItem.discount) / 100);
+       totalPrice += itemTotalPrice;
+     }
+ 
+     const order = new Order({
+       order_Id: req.body.order_Id,
+       store: req.body.store,
+       orderItems: orderItemsIds,
+       totalPrice,
+       user: req.user.id,
+       dateOrdered: req.body.dateOrdered,
+     });
+ 
+     const savedOrder = await order.save({ session });
+ 
+     await session.commitTransaction();
+     session.endSession();
+ 
+     if (!savedOrder) {
+       return res.status(400).send('The order cannot be created!');
+     }
+ 
+     res.send(savedOrder);
+   } catch (error) {
+     await session.abortTransaction();
+     session.endSession();
+     console.error(error);
+     res.status(400).send({message:'Error creating the order. Please check your input data.'});
+   }
+ });
+ 
+ 
 
-    const savedOrderItem = await newOrderItem.save();
-
-    return savedOrderItem._id;
-
-}))
-const orderItemsIdsResolved =  await orderItemsIds;
-
-const totalPrices = await Promise.all(orderItemsIdsResolved.map(async (orderItemId)=>{
-    const orderItem = await OrderItem.findById(orderItemId);
-    const totalPrice = (orderItem.price * orderItem.quantity) -((orderItem.price * orderItem.quantity /100) * orderItem.discount) ;
-
-    return totalPrice
-}))
-
-const totalPrice = totalPrices.reduce((a,b) => a +b , 0);
-
-let order = new Order({
-    order_Id:req.body.order_Id,
-    store:req.body.store,
-    orderItems: orderItemsIdsResolved,
-    totalPrice: totalPrice,
-    user: req.user.id,
-    dateOrdered:req.body.dateOrdered
-})
-order = await order.save();
-
-if(!order)
-return res.status(400).send('the order cannot be created!')
-
-res.send(order);
-
-})
 
 /**-----------------------------------------------
  * @desc    Get All orders
@@ -182,7 +199,10 @@ module.exports.userOrdersCtrl= asyncHandler(async (req, res) => {
 })
 module.exports.getOrderItemCtrl=asyncHandler(async(req,res)=>{
   try {
-    const orderItems= await OrderItem.find();
+    const orderItems= await OrderItem.find().populate({ 
+    
+          path : 'product'} 
+    );;
     res.send(orderItems);
   } catch (err) {
     console.error(err);
@@ -464,3 +484,30 @@ module.exports.addNewOrderItemCtrl = asyncHandler(async (req, res) => {
     res.status(500).json({ message: "An error occurred while fetching orders and calculating total purchase" });
   }
 });
+// Import necessary modules and models at the top of your file
+
+// ...
+
+/**-----------------------------------------------
+ * @desc    Get OrderItem by Product Name
+ * @route   /api/orderitems/product/:productName
+ * @method  GET
+ * @access  public
+ ------------------------------------------------*/
+ module.exports.getOrderItemByProductNameCtrl = asyncHandler(async (req, res) => {
+  try {
+    const productName = req.params.productName;
+    console.log(productName)
+
+    const orderItem = await OrderItem.findOne({
+      "product.name": productName,
+    }).populate("product");
+
+
+    res.status(200).json(orderItem);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "An error occurred while fetching the order item" });
+  }
+});
+

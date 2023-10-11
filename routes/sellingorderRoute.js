@@ -30,7 +30,7 @@ router.route("/sellingorderitems/:id")
 
 // Routes for /api/SellingOrders/:id
 router.route("/:id")
-  .get(getSingleSellingOrderCtrl)
+  .get(verifyToken, getSingleSellingOrderCtrl)
   .put(verifyToken,updateSellingOrderCtrl)
   .delete(verifyToken, deleteSellingorderCtrl);
 
