@@ -302,7 +302,7 @@ function calculateUpdatedTotalPrice(orderItem) {
   const order = await Order.findOne({ orderItems: orderItemId });
 
   if (!order) {
-    return res.status(404).json({ message: "Associated SellingOrder not found" });
+    return res.status(404).json({ message: "Associated Order not found" });
   }
 
   const deletedItemPrice = (orderItem.price * orderItem.quantity) - ((orderItem.price * orderItem.quantity / 100) * orderItem.discount);

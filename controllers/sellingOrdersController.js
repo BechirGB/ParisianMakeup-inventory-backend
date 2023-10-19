@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const { SellingOrder } = require('../models/selling-order');
 const { SellingOrderItem } = require('../models/sellingorder-item');
 const asyncHandler = require("express-async-handler");
@@ -61,13 +62,14 @@ const { calculateQuantityInStock } = require('./quantityInStock');
  * @access  private (only admin)
  ------------------------------------------------*/
  module.exports.createSellingOrderCtrl = asyncHandler(async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
   try {
     const sellingorderItems = req.body.sellingorderItems;
 
     const productsInStock = await calculateQuantityInStock();
 
     for (const sellingorderItemData of sellingorderItems) {
-      // Find the corresponding product in stock
       const productInStock = productsInStock.find((product) =>
         product._id.equals(sellingorderItemData.product)
       );
@@ -77,53 +79,67 @@ const { calculateQuantityInStock } = require('./quantityInStock');
       }
 
       const availableQuantity = productInStock.quantity;
+      if(!availableQuantity){
+        return res.status(400).json({
+          message:'Not enough quantity available in stock for this product.',
+        });
+
+      }
 
       if (sellingorderItemData.quantity > availableQuantity) {
         return res.status(400).json({
           message:'Not enough quantity available in stock for this product.',
         });
       }
+      else{
+        const sellingorderItemsIds = [];
+
+        for (const sellingorderItemData of sellingorderItems) {
+          const newSellingOrderItem = new SellingOrderItem({
+            quantity: sellingorderItemData.quantity,
+            product: sellingorderItemData.product,
+            price: sellingorderItemData.price,
+          });
+    
+          const savedSellingOrderItem = await newSellingOrderItem.save();
+          sellingorderItemsIds.push(savedSellingOrderItem._id);
+        }
+    
+        let totalPrice = 0;
+    
+        for (const sellingorderItemId of sellingorderItemsIds) {
+          const sellingorderItem = await SellingOrderItem.findById(sellingorderItemId);
+          totalPrice += sellingorderItem.price * sellingorderItem.quantity;
+        }
+    
+        const sellingOrder = new SellingOrder({
+          deliveryId: req.body.deliveryId,
+          sellingorderItems: sellingorderItemsIds,
+          user: req.user.id,
+          totalPrice: totalPrice,
+          date: req.body.date,
+        });
+    
+        const savedSellingOrder = await sellingOrder.save({session});
+        await session.commitTransaction();
+        session.endSession();
+        if (!savedSellingOrder) {
+          return res.status(400).send('The SellingOrder cannot be created!');
+        }
+    
+        res.send(savedSellingOrder);
+      } 
+
+      }
+    }
+    catch (error) {
+      await session.abortTransaction();
+      session.endSession();
+      console.error(error);
+      res.status(400).send({message:'Error creating the selling order. Please check your input data.'});
     }
 
-
-    const sellingorderItemsIds = [];
-
-    for (const sellingorderItemData of sellingorderItems) {
-      const newSellingOrderItem = new SellingOrderItem({
-        quantity: sellingorderItemData.quantity,
-        product: sellingorderItemData.product,
-        price: sellingorderItemData.price,
-      });
-
-      const savedSellingOrderItem = await newSellingOrderItem.save();
-      sellingorderItemsIds.push(savedSellingOrderItem._id);
-    }
-
-    let totalPrice = 0;
-
-    for (const sellingorderItemId of sellingorderItemsIds) {
-      const sellingorderItem = await SellingOrderItem.findById(sellingorderItemId);
-      totalPrice += sellingorderItem.price * sellingorderItem.quantity;
-    }
-
-    const sellingOrder = new SellingOrder({
-      deliveryId: req.body.deliveryId,
-      sellingorderItems: sellingorderItemsIds,
-      user: req.user.id,
-      totalPrice: totalPrice,
-      date: req.body.date,
-    });
-
-    const savedSellingOrder = await sellingOrder.save();
-
-    if (!savedSellingOrder) {
-      return res.status(400).send('The SellingOrder cannot be created!');
-    }
-
-    res.send(savedSellingOrder);
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
+  
 });
 
 /**-----------------------------------------------

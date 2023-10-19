@@ -7,11 +7,13 @@ router.route("/")
             const quantityInStock = await quantityInStockController.calculateQuantityInStock();
 
             const filteredQuantityInStock = quantityInStock.filter(item =>
-                (item.quantity !== 0 || item.quantity === null) 
+                (  item.quantity!=null &&  item.quantity!=0 ) 
+
     
             );
 
             res.json({ quantityInStock: filteredQuantityInStock });
+
         } catch (error) {
             console.error('Error in quantityInStock route:', error);
             res.status(500).json({ error: 'Error calculating quantity in stock' });
