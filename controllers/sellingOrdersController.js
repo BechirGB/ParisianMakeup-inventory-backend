@@ -55,18 +55,19 @@ const { calculateQuantityInStock } = require('./quantityInStock');
 });
     
 
-/**-----------------------------------------------
- * @desc    Create New Sellingorder
+
+/**
+ * @desc    Create New Selling Order
  * @route   /api/sellingorders
  * @method  POST
  * @access  private (only admin)
- ------------------------------------------------*/
- module.exports.createSellingOrderCtrl = asyncHandler(async (req, res) => {
+ */
+module.exports.createSellingOrderCtrl = asyncHandler(async (req, res) => {
   const session = await mongoose.startSession();
   session.startTransaction();
+
   try {
     const sellingorderItems = req.body.sellingorderItems;
-
     const productsInStock = await calculateQuantityInStock();
 
     for (const sellingorderItemData of sellingorderItems) {
@@ -79,68 +80,64 @@ const { calculateQuantityInStock } = require('./quantityInStock');
       }
 
       const availableQuantity = productInStock.quantity;
-      if(!availableQuantity){
+      if (!availableQuantity) {
         return res.status(400).json({
-          message:'Not enough quantity available in stock for this product.',
+          message: 'Not enough quantity available in stock for this product.',
         });
-
       }
 
       if (sellingorderItemData.quantity > availableQuantity) {
         return res.status(400).json({
-          message:'Not enough quantity available in stock for this product.',
+          message: 'Not enough quantity available in stock for this product.',
         });
       }
-      else{
-        const sellingorderItemsIds = [];
-
-        for (const sellingorderItemData of sellingorderItems) {
-          const newSellingOrderItem = new SellingOrderItem({
-            quantity: sellingorderItemData.quantity,
-            product: sellingorderItemData.product,
-            price: sellingorderItemData.price,
-          });
-    
-          const savedSellingOrderItem = await newSellingOrderItem.save();
-          sellingorderItemsIds.push(savedSellingOrderItem._id);
-        }
-    
-        let totalPrice = 0;
-    
-        for (const sellingorderItemId of sellingorderItemsIds) {
-          const sellingorderItem = await SellingOrderItem.findById(sellingorderItemId);
-          totalPrice += sellingorderItem.price * sellingorderItem.quantity;
-        }
-    
-        const sellingOrder = new SellingOrder({
-          deliveryId: req.body.deliveryId,
-          sellingorderItems: sellingorderItemsIds,
-          user: req.user.id,
-          totalPrice: totalPrice,
-          date: req.body.date,
-        });
-    
-        const savedSellingOrder = await sellingOrder.save({session});
-        await session.commitTransaction();
-        session.endSession();
-        if (!savedSellingOrder) {
-          return res.status(400).send('The SellingOrder cannot be created!');
-        }
-    
-        res.send(savedSellingOrder);
-      } 
-
-      }
-    }
-    catch (error) {
-      await session.abortTransaction();
-      session.endSession();
-      console.error(error);
-      res.status(400).send({message:'Error creating the selling order. Please check your input data.'});
     }
 
-  
+    const sellingorderItemsIds = [];
+
+    for (const sellingorderItemData of sellingorderItems) {
+      const newSellingOrderItem = new SellingOrderItem({
+        quantity: sellingorderItemData.quantity,
+        product: sellingorderItemData.product,
+        price: sellingorderItemData.price,
+      });
+
+      const savedSellingOrderItem = await newSellingOrderItem.save();
+      sellingorderItemsIds.push(savedSellingOrderItem._id);
+    }
+
+    let totalPrice = 0;
+
+    for (const sellingorderItemId of sellingorderItemsIds) {
+      const sellingorderItem = await SellingOrderItem.findById(sellingorderItemId);
+      totalPrice += sellingorderItem.price * sellingorderItem.quantity;
+    }
+
+    const sellingOrder = new SellingOrder({
+      deliveryId: req.body.deliveryId,
+      sellingorderItems: sellingorderItemsIds,
+      user: req.user.id,
+      totalPrice: totalPrice,
+      date: req.body.date,
+    });
+
+    const savedSellingOrder = await sellingOrder.save({ session });
+    await session.commitTransaction();
+    session.endSession();
+
+    if (!savedSellingOrder) {
+      return res.status(400).send('The Selling Order cannot be created!');
+    }
+
+    res.send(savedSellingOrder);
+  } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
+    console.error(error);
+    res.status(400).send({ message: 'Error creating the selling order. Please check your input data.' });
+  }
 });
+
 
 /**-----------------------------------------------
  * @desc    Delete Sellingorder
@@ -370,21 +367,7 @@ module.exports.deleteSellingorderitemCtrl = asyncHandler(async (req, res) => {
       return res.status(404).json({ message: "Selling order item not found" });
     }
 
-    const sellingOrder = await SellingOrder.findOne({ sellingorderItems: sellingorderItem._id });
-
-    if (!sellingOrder) {
-      return res.status(404).json({ message: "Associated SellingOrder not found" });
-    }
-
-    const deletedItemPrice = sellingorderItem.quantity * sellingorderItem.price;
-
-    sellingOrder.totalPrice -= deletedItemPrice;
-
-    sellingOrder.sellingorderItems = sellingOrder.sellingorderItems.filter(
-      (itemId) => itemId.toString() !== sellingorderItem._id.toString()
-    );
-
-    await sellingOrder.save();
+   
 
     await SellingOrderItem.findByIdAndDelete(req.params.sellingItemId);
 

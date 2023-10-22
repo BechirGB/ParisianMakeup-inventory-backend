@@ -7,7 +7,7 @@ const {
   deleteSellingorderitemCtrl
 
 } = require("../controllers/sellingOrdersController");
-const { verifyTokenAndAdmin } = require("../middlewares/verifyToken");
+const { verifyTokenAndAdmin ,verifyToken} = require("../middlewares/verifyToken");
 const validateObjectId = require("../middlewares/validateObjectId");
 
 router
@@ -21,7 +21,7 @@ router
 router
   .route("/:sellingItemId")
   .put(updateSellingOrderItemCtrl)
-  .get(getSinglesellingorderItemCtrl)
+  .get(verifyToken,getSinglesellingorderItemCtrl)
   .delete(deleteSellingorderitemCtrl)
 
   module.exports = router;

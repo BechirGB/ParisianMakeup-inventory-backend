@@ -21,17 +21,17 @@ router.route("/")
   .get(getAllSellingordersCtrl);
 
 router.route("/count")
-  .get(totalSellingOrders);
+  .get(verifyToken,totalSellingOrders);
 router.route("/total")
- .get(getSellingOrdersBetweenDatesCtrl);
+ .get(verifyToken,getSellingOrdersBetweenDatesCtrl);
 
 router.route("/sellingorderitems/:id")
   .put(verifyToken,addNewSellingOrderItemCtrl);
 
 // Routes for /api/SellingOrders/:id
 router.route("/:id")
-  .get(verifyToken, getSingleSellingOrderCtrl)
-  .put(verifyToken,updateSellingOrderCtrl)
+  .get( getSingleSellingOrderCtrl)
+  .put(updateSellingOrderCtrl)
   .delete(verifyToken, deleteSellingorderCtrl);
 
 module.exports = router;
